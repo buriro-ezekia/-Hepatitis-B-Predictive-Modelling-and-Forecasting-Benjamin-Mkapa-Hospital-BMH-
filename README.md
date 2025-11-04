@@ -89,5 +89,67 @@ A projected **8–9% annual increase** in Hepatitis B cases suggests rising heal
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
+
+BMH_HepatitisB_Modeling/
+│
+├── data/ # Raw and cleaned dataset files
+├── notebooks/ # Jupyter notebooks for data analysis
+│ ├── BMH_Longitudinal_Data_III.ipynb
+│ └── Model_Training_Results.ipynb
+├── models/ # Trained models (XGBoost, LightGBM, LSTM, LinearReg)
+├── reports/
+│ └── Chapter_4_Findings_and_Discussion_BMH.docx
+├── README.md # Project documentation
+└── requirements.txt # Python dependencies
+---
+
+## Key Findings
+
+- Hepatitis B cases increased **from 68 (2017) to 421 (2024)** — a **28% average annual growth**.  
+- **Linear Regression** was the most reliable model, with the lowest prediction errors.  
+- Forecasts show **continuous growth to 648 monthly cases by 2029**.  
+- Predictive modelling provides actionable insight for **resource allocation and diagnostic capacity planning** at BMH.
+
+---
+
+## Future Work
+
+- Explore **hybrid models** (e.g., ARIMA–XGBoost, LSTM–Attention).  
+- Integrate predictive tools into BMH’s **Hospital Information System (HMIS)**.  
+- Expand dataset to include **behavioural and geographical factors**.  
+- Apply forecasting methods to **multi-centre national data**.
+
+---
+
+## Author
+
+**Buriro Chimodoi Ezekia**  
+Benjamin Mkapa Hospital (BMH) – Dodoma, Tanzania  
+*Master’s Dissertation, University of Dodoma (2025)*  
+
+---
+
+## Citation
+
+If you use this repository or its methods in your research, please cite as:
+
+> Ezekia, Buriro Chimodoi. (2025). *Hepatitis B Predictive Modelling and Forecasting at Benjamin Mkapa Hospital (2017–2024).* University of Dodoma.
+
+---
+
+## License
+
+This repository is shared under the **MIT License**.  
+You are free to use, modify, and distribute this work with appropriate citation.
+
+---
+
+## Acknowledgement
+
+Data provided courtesy of **Benjamin Mkapa Hospital (BMH)** and the **Tanzanian Ministry of Health**.  
+This project contributes to improving data-driven healthcare planning and predictive analytics for Hepatitis B management in Tanzania.
+
+---
+
 
