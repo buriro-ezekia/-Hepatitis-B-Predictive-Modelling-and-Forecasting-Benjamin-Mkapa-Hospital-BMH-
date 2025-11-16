@@ -1,4 +1,4 @@
-name: Docker CI
+name: Validate requirements (Python 3.13)
 
 on:
   push:
@@ -7,19 +7,42 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        python-version: [3.13]
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Build Docker image
-      run: |
-        docker build -t hep-forecast:ci .
+      - name: Upgrade pip/build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
 
-    - name: List image
-      run: docker images | grep hep-forecast || true
+      - name: Install requirements
+        run: |
+          pip install -r requirements.txt
+
+      - name: Smoke test imports
+        run: |
+          python - <<'PY'
+          import sys
+          import importlib
+          pkgs = [
+              'numpy', 'pandas', 'matplotlib', 'plotly', 'sklearn',
+              'xgboost', 'lightgbm', 'tensorflow', 'keras', 'scipy'
+          ]
+          for p in pkgs:
+              try:
+                  importlib.import_module(p)
+                  print(p, 'OK')
+              except Exception as e:
+                  print(p, 'FAILED', e)
+                  sys.exit(1)
+          PY
