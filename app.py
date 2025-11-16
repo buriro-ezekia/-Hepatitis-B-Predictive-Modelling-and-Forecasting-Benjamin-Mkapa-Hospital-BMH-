@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-st.set_page_config(layout="wide", page_title="Hepatitis B Forecasting — Prototype")
+st.set_page_config(layout="wide", page_title="Hepatitis B Forecasting")
 
 # --- Simulated data generation ---
 def gen_forecast_data(start_date, days=60, horizon=14):
