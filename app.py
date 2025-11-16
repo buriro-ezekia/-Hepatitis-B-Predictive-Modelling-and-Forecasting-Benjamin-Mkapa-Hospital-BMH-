@@ -64,7 +64,7 @@ df_patients = gen_patient_table(100)
 # --- Header ---
 col1, col2, col3 = st.columns([3,1,1])
 with col1:
-    st.title("Hepatitis B Forecasting — BMH (Prototype)")
+    st.title("Hepatitis B Forecasting — BMH")
     st.markdown(f"Model: **{model_version}** • Last run: {datetime.now().isoformat(timespec='seconds')}")
 with col2:
     st.metric("Next-7-day expected cases", int(df_forecast['predicted_median'][-7:].sum()), delta="+4%")
