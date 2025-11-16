@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,8 +8,10 @@ from datetime import datetime, timedelta
 
 st.set_page_config(layout="wide", page_title="Hepatitis B Forecasting")
 
-# --- Simulated data generation ---
+# --- Data loaders / generators ---
+
 def gen_forecast_data(start_date, days=60, horizon=14):
+    """Fallback simulated data (kept for demo / fallback)."""
     dates = pd.date_range(start_date - pd.Timedelta(days=30), periods=days)
     np.random.seed(42)
     actual = np.clip(np.round(10 + np.sin(np.linspace(0, 3.14, days)) * 4 + np.random.randn(days)), 0, None)
@@ -26,8 +29,42 @@ def gen_forecast_data(start_date, days=60, horizon=14):
     })
     return df
 
+def load_forecast_csv(path="data/forecasts.csv"):
+    """
+    Load a forecast CSV and validate minimal columns.
+    Expected minimal columns: date, predicted_median
+    Optional: actual, pi80_low/pi80_high, pi95_low/pi95_high
+    """
+    df = pd.read_csv(path, parse_dates=["date"])
+    df = df.sort_values("date").reset_index(drop=True)
+
+    # ensure required columns
+    expected = ["date", "predicted_median"]
+    missing = [c for c in expected if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns in forecast CSV: {missing}")
+
+    # normalize column names (strip)
+    df.columns = [c.strip() for c in df.columns]
+
+    # Add optional columns if missing so the rest of the app can assume they exist
+    if "actual" not in df.columns:
+        df["actual"] = np.nan
+    if "pi80_low" not in df.columns or "pi80_high" not in df.columns:
+        # create simple fixed-width PI if not provided (safe fallback)
+        pi80 = 1.5
+        df["pi80_low"] = df["predicted_median"] - pi80
+        df["pi80_high"] = df["predicted_median"] + pi80
+    if "pi95_low" not in df.columns or "pi95_high" not in df.columns:
+        pi95 = 3.0
+        df["pi95_low"] = df["predicted_median"] - pi95
+        df["pi95_high"] = df["predicted_median"] + pi95
+
+    return df
+
 def gen_metrics(df):
     df_metrics = df.copy()
+    # If actuals are not available, error-based metrics will be NaN
     df_metrics["error"] = (df_metrics["actual"] - df_metrics["predicted_median"]).abs()
     df_metrics["MAE"] = df_metrics["error"].rolling(7, min_periods=1).mean()
     df_metrics["RMSE"] = np.sqrt((df_metrics["error"]**2).rolling(7, min_periods=1).mean())
@@ -56,77 +93,92 @@ cohort = st.sidebar.selectbox("Cohort", ["All", "Adults 18-45", "Adults 46+", "P
 model_version = st.sidebar.selectbox("Model version", ["v1.0", "v1.1", "experimental"], index=1)
 start_date = datetime.now().date()
 
-# --- Data ---
-df_forecast = gen_forecast_data(start_date, days=60, horizon=horizon)
+# Data source selection
+st.sidebar.markdown("### Forecast data source")
+use_repo_csv = False
+repo_csv_path = "data/forecasts.csv"
+if os.path.exists(repo_csv_path):
+    use_repo_csv = st.sidebar.checkbox(f"Load {repo_csv_path}", value=True)
+else:
+    st.sidebar.write(f"No repo CSV at {repo_csv_path}")
+
+uploaded_file = st.sidebar.file_uploader("Or upload forecast CSV", type=["csv"])
+
+# --- Data Loading (attempt CSV, then uploaded file, else fallback to simulated) ---
+df_forecast = None
+load_error = None
+
+if uploaded_file is not None:
+    try:
+        df_forecast = pd.read_csv(uploaded_file, parse_dates=["date"])
+        df_forecast = df_forecast.sort_values("date").reset_index(drop=True)
+        # Validate minimal columns
+        if "predicted_median" not in df_forecast.columns:
+            load_error = "Uploaded CSV is missing the required column: predicted_median"
+    except Exception as e:
+        load_error = f"Error reading uploaded CSV: {e}"
+elif use_repo_csv:
+    try:
+        df_forecast = load_forecast_csv(repo_csv_path)
+    except Exception as e:
+        load_error = f"Error loading {repo_csv_path}: {e}"
+
+if df_forecast is None:
+    if load_error:
+        st.sidebar.error(load_error)
+        st.sidebar.info("Falling back to simulated demo data.")
+    df_forecast = gen_forecast_data(start_date, days=60, horizon=horizon)
+
+# --- Derived data ---
 df_metrics = gen_metrics(df_forecast)
 df_patients = gen_patient_table(100)
 
-# --- Header ---
-col1, col2, col3 = st.columns([3,1,1])
+# --- Simple dashboard display (examples) ---
+st.title("Hepatitis B Forecasting Dashboard")
+
+col1, col2 = st.columns([3,1])
+
 with col1:
-    st.title("Hepatitis B Forecasting — BMH")
-    st.markdown(f"Model: **{model_version}** • Last run: {datetime.now().isoformat(timespec='seconds')}")
-with col2:
-    st.metric("Next-7-day expected cases", int(df_forecast['predicted_median'][-7:].sum()), delta="+4%")
-with col3:
-    st.metric("Model confidence", "82%", delta="-1%")
-
-# --- Forecast chart + KPIs ---
-left, right = st.columns([3,1])
-with left:
+    st.subheader("Forecast over time")
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_forecast.date, y=df_forecast.actual, mode="lines+markers", name="Actual"))
-    fig.add_trace(go.Scatter(x=df_forecast.date, y=df_forecast.predicted_median, mode="lines", name="Predicted"))
-    fig.add_trace(go.Scatter(x=df_forecast.date, y=df_forecast.pi95_high, fill=None, mode='lines', line_color='rgba(0,0,0,0)', showlegend=False))
     fig.add_trace(go.Scatter(
-        x=df_forecast.date.tolist()+df_forecast.date[::-1].tolist(),
-        y=df_forecast.pi80_high.tolist()+df_forecast.pi80_low[::-1].tolist(),
-        fill='toself',
-        fillcolor='rgba(0,176,246,0.1)',
-        line_color='rgba(255,255,255,0)',
-        name='80% PI',
-        showlegend=True
+        x=df_forecast["date"], y=df_forecast["predicted_median"],
+        mode="lines+markers", name="Predicted median"
     ))
-    fig.update_layout(height=420, margin=dict(l=10,r=10,t=30,b=10), legend=dict(orientation="h"))
+    if "actual" in df_forecast.columns and df_forecast["actual"].notna().any():
+        fig.add_trace(go.Scatter(
+            x=df_forecast["date"], y=df_forecast["actual"],
+            mode="lines+markers", name="Actual"
+        ))
+    # PI ribbons
+    fig.add_traces([
+        go.Scatter(
+            x=pd.concat([df_forecast["date"], df_forecast["date"][::-1]]),
+            y=pd.concat([df_forecast["pi95_high"], df_forecast["pi95_low"][::-1]]),
+            fill='toself', fillcolor='rgba(200,200,255,0.2)',
+            line=dict(color='rgba(255,255,255,0)'), showlegend=False, name="95% PI"
+        ),
+        go.Scatter(
+            x=pd.concat([df_forecast["date"], df_forecast["date"][::-1]]),
+            y=pd.concat([df_forecast["pi80_high"], df_forecast["pi80_low"][::-1]]),
+            fill='toself', fillcolor='rgba(150,150,255,0.4)',
+            line=dict(color='rgba(255,255,255,0)'), showlegend=False, name="80% PI"
+        )
+    ])
+    fig.update_layout(height=500, xaxis_title="Date", yaxis_title="Count / Score")
     st.plotly_chart(fig, use_container_width=True)
-with right:
-    st.subheader("Quick KPIs")
-    st.metric("MAE (7d)", f"{df_metrics.MAE.iloc[-1]:.2f}")
-    st.metric("RMSE (7d)", f"{df_metrics.RMSE.iloc[-1]:.2f}")
-    drift_score = np.round(np.random.rand(), 2)
-    st.metric("Data drift score", f"{drift_score}", delta="+0.02")
 
-# --- Performance & Data Quality ---
-c1, c2 = st.columns(2)
-with c1:
-    st.subheader("Model performance (rolling 7d)")
-    fig2 = px.line(df_metrics, x="date", y=["MAE","RMSE"])
-    st.plotly_chart(fig2, use_container_width=True)
-with c2:
-    st.subheader("Data quality — missingness (simulated)")
-    # Simulated heatmap
-    features = ["ALT","AST","HBsAg","Platelets","Age"]
-    mat = np.random.rand(len(features), 30)
-    df_heat = pd.DataFrame(mat, index=features, columns=pd.date_range(datetime.now()-timedelta(days=29), periods=30).strftime("%Y-%m-%d"))
-    st.dataframe(df_heat.style.background_gradient(axis=None))
+with col2:
+    st.subheader("Latest metrics")
+    latest = df_metrics.iloc[-1][["MAE","RMSE"]].to_frame().T
+    st.table(latest)
 
-# --- Alerts & Logs ---
-a1, a2 = st.columns([1,3])
-with a1:
-    st.subheader("Alerts")
-    st.info("Accuracy drop > 15% in last 7 days")
-    st.warning("Feature 'HBsAg' missing rate > 20% on recent batch")
-with a2:
-    st.subheader("Recent retrain & audit log")
-    st.write("- v1.1 retrain finished 2025-11-10 03:20 (commit: abcd1234)")
-    st.write("- Manual review: cohort filter adjusted (Adults 46+)")
-    st.button("Trigger retrain (demo)")
+st.markdown("### Patients (sample)")
+st.dataframe(df_patients.head(20))
 
-# --- Patient table ---
-st.subheader("Patient-level explorer")
-st.write("Click a row to view details (demo table with hashed ids).")
-st.dataframe(df_patients.head(30))
-
-# # --- Footer / notes ---
-# st.markdown("---")
-# st.caption("Prototype uses simulated data. Next step: hook to real /api endpoints and add auth, RBAC, and alert integrations.")
+# Optional: allow downloading a cleaned/validated CSV
+if st.button("Download validated forecast CSV"):
+    buf = df_forecast.copy()
+    buf["date"] = buf["date"].dt.strftime("%Y-%m-%d")
+    csv = buf.to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", data=csv, file_name="validated_forecast.csv", mime="text/csv")
