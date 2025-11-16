@@ -152,4 +152,31 @@ This project contributes to improving data-driven healthcare planning and predic
 
 ---
 
+## Deployment
+
+This repository includes a Streamlit dashboard (`app.py`) for visualizing Hepatitis B forecasting data. You can run it locally, with Docker, or deploy to Streamlit Community Cloud.
+
+### Quick Start
+
+**Run locally:**
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+**Run with Docker:**
+```bash
+docker-compose up --build
+```
+
+**Deploy to Streamlit Community Cloud:**
+1. Sign in at [share.streamlit.io](https://share.streamlit.io)
+2. Click "New app" and connect this GitHub repository
+3. Select branch `main` and file `app.py`
+4. Click "Deploy!"
+
+For detailed deployment instructions, see [docs/STREAMLIT_DEPLOY.md](docs/STREAMLIT_DEPLOY.md).
+
+---
+
 

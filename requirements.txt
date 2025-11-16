@@ -25,3 +25,6 @@ tqdm==4.66.5
 # Optional (for saving models and visual exports)
 joblib==1.4.2
 seaborn==0.13.2
+
+# Web application framework
+streamlit==1.28.0
