@@ -127,6 +127,6 @@ st.subheader("Patient-level explorer")
 st.write("Click a row to view details (demo table with hashed ids).")
 st.dataframe(df_patients.head(30))
 
-# --- Footer / notes ---
-st.markdown("---")
-st.caption("Prototype uses simulated data. Next step: hook to real /api endpoints and add auth, RBAC, and alert integrations.")
+# # --- Footer / notes ---
+# st.markdown("---")
+# st.caption("Prototype uses simulated data. Next step: hook to real /api endpoints and add auth, RBAC, and alert integrations.")
