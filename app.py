@@ -29,7 +29,7 @@ def gen_forecast_data(start_date, days=60, horizon=14):
     })
     return df
 
-def load_forecast_csv(path="data/forecasts.csv"):
+def load_forecast_csv(path="data/monthly_forecast_2025_2029.csv"):
     """
     Load a forecast CSV and validate minimal columns.
     Expected minimal columns: date, predicted_median
