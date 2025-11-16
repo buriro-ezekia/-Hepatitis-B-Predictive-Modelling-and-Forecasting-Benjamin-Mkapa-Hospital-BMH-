@@ -152,4 +152,31 @@ This project contributes to improving data-driven healthcare planning and predic
 
 ---
 
+## Deployment
+
+This repository includes a Streamlit dashboard (`app.py`) for interactive visualization and forecasting.
+
+### Quick Start
+
+**Run locally:**
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+**Run with Docker:**
+```bash
+docker build -t hep-forecast:latest .
+docker run -p 8501:8501 hep-forecast:latest
+```
+
+**Run with Docker Compose:**
+```bash
+docker-compose up
+```
+
+For detailed deployment instructions including Streamlit Community Cloud setup, see [docs/STREAMLIT_DEPLOY.md](docs/STREAMLIT_DEPLOY.md).
+
+---
+
 
